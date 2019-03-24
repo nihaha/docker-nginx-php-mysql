@@ -19,9 +19,6 @@ help:
 	@echo "  mysql-dump          Create backup of all databases"
 	@echo "  mysql-restore       Restore backup of all databases"
 
-init:
-	@$(shell cp -n $(shell pwd)/web/app/composer.json.dist $(shell pwd)/web/app/composer.json 2> /dev/null)
-
 clean:
 	@rm -Rf data/db/mysql/*
 	@rm -Rf $(MYSQL_DUMPS_DIR)/*
@@ -32,12 +29,11 @@ clean:
 composer-up:
 	@docker run --rm -v $(shell pwd)/web:/app composer update
 
-docker-start: init
+docker-start:
 	docker-compose up -d
 
 docker-stop:
 	@docker-compose down -v
-	@make clean
 
 gen-certs:
 	@docker run --rm -v $(shell pwd)/etc/ssl:/certificates -e "SERVER=$(NGINX_HOST)" jacoelho/generate-certificate
@@ -53,5 +49,9 @@ mysql-dump:
 mysql-restore:
 	@docker exec -i $(shell docker-compose ps -q mysqldb) mysql -u"$(MYSQL_ROOT_USER)" -p"$(MYSQL_ROOT_PASSWORD)" < $(MYSQL_DUMPS_DIR)/db.sql 2>/dev/null
 
-resetOwner:
-	@$(shell chown -Rf $(SUDO_USER):$(shell id -g -n $(SUDO_USER)) $(MYSQL_DUMPS_DIR) "$(shell pwd)/etc/ssl" "$(shell pwd)/web" 2> /dev/null)
+get-laravel:
+	sudo docker run --rm -v $(shell pwd):/app composer create-project --prefer-dist laravel/laravel web
+
+set-owner:
+	sudo chown -R $(USER):$(USER) web
+	sudo chown -R www-data:www-data web/storage
